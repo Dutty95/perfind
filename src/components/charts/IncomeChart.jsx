@@ -9,9 +9,8 @@ import {
   Tooltip,
   Legend,
   ArcElement,
-  BarElement,
 } from 'chart.js';
-import { Line, Doughnut, Bar } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 import { formatCurrency } from '../../utils/currency';
 
 ChartJS.register(
@@ -22,8 +21,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  ArcElement,
-  BarElement
+  ArcElement
 );
 
 const IncomeChart = ({ incomeData, type = 'line', timeframe = 'monthly' }) => {
@@ -63,11 +61,14 @@ const IncomeChart = ({ incomeData, type = 'line', timeframe = 'monthly' }) => {
   // Doughnut chart for income sources
   if (type === 'doughnut') {
     const latestData = data[data.length - 1];
-    const sources = latestData.sources || {
-      salary: latestData.amount * 0.75,
-      freelance: latestData.amount * 0.20,
-      investments: latestData.amount * 0.05
-    };
+    // Use actual source data if available, otherwise use default breakdown
+    const sources = latestData.sources && Object.keys(latestData.sources).length > 0 
+      ? latestData.sources 
+      : {
+          salary: latestData.amount * 0.75,
+          freelance: latestData.amount * 0.20,
+          investments: latestData.amount * 0.05
+        };
 
     const doughnutData = {
       labels: Object.keys(sources).map(key => 
@@ -96,11 +97,19 @@ const IncomeChart = ({ incomeData, type = 'line', timeframe = 'monthly' }) => {
     const doughnutOptions = {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: 20
+        }
+      },
       plugins: {
         legend: {
-          position: 'right',
+          position: 'bottom',
           labels: {
-            padding: 20,
+            padding: 15,
             usePointStyle: true,
             pointStyle: 'circle',
             font: {
@@ -158,110 +167,7 @@ const IncomeChart = ({ incomeData, type = 'line', timeframe = 'monthly' }) => {
     );
   }
 
-  // Bar chart for income comparison
-  if (type === 'bar') {
-    const sources = ['Salary', 'Freelance', 'Investments'];
-    const sourceData = sources.map(source => {
-      const key = source.toLowerCase();
-      return data.reduce((sum, item) => {
-        const sourceAmount = item.sources?.[key] || item.amount * (key === 'salary' ? 0.75 : key === 'freelance' ? 0.20 : 0.05);
-        return sum + sourceAmount;
-      }, 0) / data.length;
-    });
 
-    const barData = {
-      labels: sources,
-      datasets: [
-        {
-          label: 'Average Monthly Income',
-          data: sourceData,
-          backgroundColor: [
-            'rgba(16, 185, 129, 0.8)',
-            'rgba(59, 130, 246, 0.8)',
-            'rgba(245, 158, 11, 0.8)'
-          ],
-          borderColor: [
-            colors.secondary,
-            colors.primary,
-            colors.warning
-          ],
-          borderWidth: 2,
-          borderRadius: 8,
-          borderSkipped: false,
-        },
-      ],
-    };
-
-    const barOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          titleColor: '#ffffff',
-          bodyColor: '#ffffff',
-          borderColor: '#374151',
-          borderWidth: 1,
-          cornerRadius: 8,
-          displayColors: true,
-          callbacks: {
-            label: function(context) {
-              return `Average: ${formatCurrency(context.parsed.y)}`;
-            }
-          }
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            font: {
-              size: 11,
-              weight: '500'
-            },
-            color: '#6B7280'
-          }
-        },
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(107, 114, 128, 0.1)',
-            drawBorder: false,
-          },
-          ticks: {
-            font: {
-              size: 11,
-              weight: '500'
-            },
-            color: '#6B7280',
-            callback: function(value) {
-              return formatCurrency(value);
-            }
-          }
-        },
-      },
-    };
-
-    return (
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Average Income by Source</h3>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-gradient-to-r from-green-500 to-blue-600 rounded-full"></div>
-            <span className="text-sm text-gray-600">6 Month Average</span>
-          </div>
-        </div>
-        <div className="h-80">
-          <Bar data={barData} options={barOptions} />
-        </div>
-      </div>
-    );
-  }
 
   // Line chart for income trends
   const lineData = {
@@ -332,8 +238,8 @@ const IncomeChart = ({ incomeData, type = 'line', timeframe = 'monthly' }) => {
           },
           color: '#6B7280',
           callback: function(value) {
-            return '$' + value.toLocaleString();
-          }
+              return formatCurrency(value);
+            }
         }
       },
     },

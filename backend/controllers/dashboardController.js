@@ -12,13 +12,14 @@ export const getDashboardOverview = async (req, res) => {
     // Get transaction statistics
     const transactionStats = await Transaction.getStatsByUserId(req.user._id);
     
-    // Get recent transactions (last 5)
+    // Get recent transactions (last 5) for display
     const recentTransactions = await Transaction.findByUserId(req.user._id);
     const recentTransactionsLimited = recentTransactions.slice(0, 5);
     
     // Get budget data with spending analysis
     const budgets = await Budget.find({ userId: req.user._id });
     const budgetsWithSpending = await Promise.all(budgets.map(async budget => {
+      // Use all transactions for budget calculations, not just recent 5
       const categoryTransactions = recentTransactions.filter(transaction => 
         transaction.category === budget.category && transaction.type === 'expense'
       );
@@ -50,9 +51,22 @@ export const getDashboardOverview = async (req, res) => {
         }
       }
       
+      // For current month budgets, include all transactions from current month
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+      
       const periodSpent = categoryTransactions
         .filter(transaction => {
           const transactionDate = new Date(transaction.date);
+          const transactionMonth = transactionDate.getMonth();
+          const transactionYear = transactionDate.getFullYear();
+          
+          // For monthly budgets, include transactions from current month
+          if (budget.period === 'monthly') {
+            return transactionMonth === currentMonth && transactionYear === currentYear;
+          }
+          
+          // For other periods, use the original date range logic
           return transactionDate >= periodStart && transactionDate <= periodEnd;
         })
         .reduce((total, transaction) => total + Math.abs(transaction.amount), 0);

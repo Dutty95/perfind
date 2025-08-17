@@ -1,6 +1,7 @@
 // backend/models/Goal.js
 
 import mongoose from 'mongoose';
+import { encryptAmount, decryptAmount } from '../config/encryption.js';
 
 const goalSchema = new mongoose.Schema({
   userId: {
@@ -31,14 +32,16 @@ const goalSchema = new mongoose.Schema({
     trim: true
   },
   targetAmount: {
-    type: Number,
+    type: String,
     required: [true, 'Target amount is required'],
-    min: [0, 'Target amount must be positive']
+    set: encryptAmount,
+    get: decryptAmount
   },
   currentAmount: {
-    type: Number,
-    default: 0,
-    min: [0, 'Current amount cannot be negative']
+    type: String,
+    default: '0',
+    set: encryptAmount,
+    get: decryptAmount
   },
   targetDate: {
     type: Date,
@@ -73,13 +76,17 @@ const goalSchema = new mongoose.Schema({
 
 // Virtual for progress percentage
 goalSchema.virtual('progressPercentage').get(function() {
-  if (this.targetAmount === 0) return 0;
-  return Math.round((this.currentAmount / this.targetAmount) * 100);
+  const target = parseFloat(this.targetAmount) || 0;
+  const current = parseFloat(this.currentAmount) || 0;
+  if (target === 0) return 0;
+  return Math.round((current / target) * 100);
 });
 
 // Virtual for remaining amount
 goalSchema.virtual('remainingAmount').get(function() {
-  return Math.max(0, this.targetAmount - this.currentAmount);
+  const target = parseFloat(this.targetAmount) || 0;
+  const current = parseFloat(this.currentAmount) || 0;
+  return Math.max(0, target - current);
 });
 
 // Virtual for days remaining
@@ -118,8 +125,20 @@ goalSchema.virtual('goalStatus').get(function() {
   return 'active';
 });
 
-// Ensure virtual fields are serialized
-goalSchema.set('toJSON', { virtuals: true });
+// Ensure virtual fields are serialized and amounts are properly decrypted
+goalSchema.set('toJSON', { 
+  virtuals: true,
+  transform: function(doc, ret) {
+    // Ensure amounts are properly decrypted for JSON output
+    if (ret.targetAmount) {
+      ret.targetAmount = parseFloat(ret.targetAmount) || 0;
+    }
+    if (ret.currentAmount) {
+      ret.currentAmount = parseFloat(ret.currentAmount) || 0;
+    }
+    return ret;
+  }
+});
 goalSchema.set('toObject', { virtuals: true });
 
 // Static methods
@@ -137,10 +156,12 @@ goalSchema.statics.findByIdAndUserId = async function(id, userId) {
 
 // Instance methods
 goalSchema.methods.updateProgress = function(amount) {
-  this.currentAmount = Math.max(0, amount);
+  const numericAmount = Math.max(0, parseFloat(amount) || 0);
+  this.currentAmount = numericAmount.toString();
   
   // Auto-complete goal if target is reached
-  if (this.currentAmount >= this.targetAmount && this.status === 'active') {
+  const target = parseFloat(this.targetAmount) || 0;
+  if (numericAmount >= target && this.status === 'active') {
     this.status = 'completed';
   }
   
@@ -148,7 +169,9 @@ goalSchema.methods.updateProgress = function(amount) {
 };
 
 goalSchema.methods.addProgress = function(amount) {
-  return this.updateProgress(this.currentAmount + amount);
+  const current = parseFloat(this.currentAmount) || 0;
+  const additional = parseFloat(amount) || 0;
+  return this.updateProgress(current + additional);
 };
 
 const Goal = mongoose.model('Goal', goalSchema);

@@ -179,7 +179,7 @@ export const NotificationProvider = ({ children }) => {
       // Remove old budget notifications
       setNotifications(prev => {
         const filtered = prev.filter(notif => 
-          notif.type !== 'error' && notif.type !== 'warning' ||
+          (notif.type !== 'error' && notif.type !== 'warning') ||
           !budgetNotifications.some(newNotif => newNotif.id === notif.id)
         );
         return [...filtered, ...budgetNotifications];
@@ -243,18 +243,36 @@ export const NotificationProvider = ({ children }) => {
 
   // Check for goal deadlines, budget status, and send daily reminders
   useEffect(() => {
-    checkGoalDeadlines();
-    checkBudgetStatus();
-    sendDailyReminder();
+    const runChecks = async () => {
+      try {
+        await checkGoalDeadlines();
+        await checkBudgetStatus();
+        sendDailyReminder();
+      } catch (error) {
+        console.error('Error running notification checks:', error);
+      }
+    };
+    
+    runChecks();
     
     // Check goals and budgets every hour
-    const interval = setInterval(() => {
-      checkGoalDeadlines();
-      checkBudgetStatus();
+    const interval = setInterval(async () => {
+      try {
+        await checkGoalDeadlines();
+        await checkBudgetStatus();
+      } catch (error) {
+        console.error('Error in periodic notification checks:', error);
+      }
     }, 60 * 60 * 1000);
     
     // Send daily reminder every 24 hours
-    const dailyInterval = setInterval(sendDailyReminder, 24 * 60 * 60 * 1000);
+    const dailyInterval = setInterval(() => {
+      try {
+        sendDailyReminder();
+      } catch (error) {
+        console.error('Error sending daily reminder:', error);
+      }
+    }, 24 * 60 * 60 * 1000);
     
     return () => {
       clearInterval(interval);

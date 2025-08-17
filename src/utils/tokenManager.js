@@ -47,8 +47,8 @@ export const isTokenExpired = (token) => {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const currentTime = Date.now() / 1000;
     
-    // Consider token expired if it expires within the next 5 minutes
-    return payload.exp < (currentTime + 300);
+    // Consider token expired if it expires within the next 2 minutes
+    return payload.exp < (currentTime + 120);
   } catch (error) {
     console.error('Error parsing token:', error);
     return true;

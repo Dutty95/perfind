@@ -36,7 +36,7 @@ const Budget = () => {
       setError(null);
       const response = await budgetAPI.getAll();
       const budgetData = response.data || response;
-      console.log('Fetched budgets:', budgetData);
+      // Budgets fetched successfully
       setBudgets(budgetData);
     } catch (err) {
       console.error('Error fetching budgets:', err);
@@ -117,12 +117,9 @@ const Budget = () => {
   };
 
   const handleDeleteBudget = async (budgetId) => {
-    console.log('Delete function called with budgetId:', budgetId, 'Type:', typeof budgetId);
     if (window.confirm('Are you sure you want to delete this budget?')) {
       try {
-        console.log('Attempting to delete budget:', budgetId);
         const response = await budgetAPI.delete(budgetId);
-        console.log('Delete response:', response);
         fetchBudgets();
       } catch (err) {
         console.error('Error deleting budget:', err);
@@ -242,7 +239,7 @@ const Budget = () => {
   };
 
   const renderBudgetCard = (budget) => {
-    console.log('Rendering budget card for:', budget);
+    // Rendering budget card
     return (
       <div key={budget._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4">

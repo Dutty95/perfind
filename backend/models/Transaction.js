@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { encrypt, decrypt, encryptAmount, decryptAmount } from '../config/encryption.js';
 
 const transactionSchema = new mongoose.Schema({
   userId: {
@@ -10,12 +11,15 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Description is required'],
     trim: true,
-    maxlength: [200, 'Description cannot exceed 200 characters']
+    maxlength: [200, 'Description cannot exceed 200 characters'],
+    set: encrypt,  // Encrypt on save
+    get: decrypt   // Decrypt on retrieval
   },
   amount: {
-    type: Number,
+    type: mongoose.Schema.Types.Mixed, // Allow both Number and String (encrypted)
     required: [true, 'Amount is required'],
-    min: [0.01, 'Amount must be greater than 0']
+    set: encryptAmount,  // Encrypt on save
+    get: decryptAmount   // Decrypt on retrieval
   },
   category: {
     type: String,
@@ -33,7 +37,21 @@ const transactionSchema = new mongoose.Schema({
     default: Date.now
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { getters: true },
+  toObject: { getters: true }
+});
+
+// Ensure getters are applied when converting to JSON
+transactionSchema.set('toJSON', { 
+  getters: true,
+  transform: function(doc, ret) {
+    // Ensure amount is properly decrypted for JSON output
+    if (ret.amount && typeof ret.amount === 'string') {
+      ret.amount = decryptAmount(ret.amount);
+    }
+    return ret;
+  }
 });
 
 // Static method to find transactions by user ID
@@ -52,11 +70,11 @@ transactionSchema.statics.getStatsByUserId = async function(userId) {
   
   const totalIncome = userTransactions
     .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + (typeof t.amount === 'number' ? t.amount : decryptAmount(t.amount)), 0);
   
   const totalExpenses = userTransactions
     .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    .reduce((sum, t) => sum + Math.abs(typeof t.amount === 'number' ? t.amount : decryptAmount(t.amount)), 0);
   
   const totalBalance = totalIncome - totalExpenses;
   
@@ -73,11 +91,11 @@ transactionSchema.statics.getStatsByUserId = async function(userId) {
   
   const monthlyIncome = monthlyTransactions
     .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + (typeof t.amount === 'number' ? t.amount : decryptAmount(t.amount)), 0);
   
   const monthlyExpenses = monthlyTransactions
     .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    .reduce((sum, t) => sum + Math.abs(typeof t.amount === 'number' ? t.amount : decryptAmount(t.amount)), 0);
   
   return {
     totalIncome,
@@ -107,11 +125,11 @@ transactionSchema.statics.getMonthlyData = async function(userId, months = 6) {
     
     const income = monthTransactions
       .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (typeof t.amount === 'number' ? t.amount : decryptAmount(t.amount)), 0);
     
     const expense = monthTransactions
       .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      .reduce((sum, t) => sum + Math.abs(typeof t.amount === 'number' ? t.amount : decryptAmount(t.amount)), 0);
     
     monthlyData.push({
       month: date.toLocaleDateString('en-US', { month: 'short' }),
@@ -133,7 +151,7 @@ transactionSchema.statics.getCategoryData = async function(userId) {
   let totalExpenses = 0;
   
   expenseTransactions.forEach(t => {
-    const amount = Math.abs(t.amount);
+    const amount = Math.abs(typeof t.amount === 'number' ? t.amount : decryptAmount(t.amount));
     categoryTotals[t.category] = (categoryTotals[t.category] || 0) + amount;
     totalExpenses += amount;
   });

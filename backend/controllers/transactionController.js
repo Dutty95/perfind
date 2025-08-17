@@ -38,19 +38,6 @@ export const createTransaction = async (req, res) => {
   try {
     const { description, amount, category, type, date } = req.body;
     
-    // Validation
-    if (!description || !amount || !category || !type) {
-      return res.status(400).json({ message: 'Please provide all required fields' });
-    }
-    
-    if (!['income', 'expense'].includes(type)) {
-      return res.status(400).json({ message: 'Type must be either income or expense' });
-    }
-    
-    if (isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ message: 'Amount must be a valid positive number' });
-    }
-    
     // Store amount as positive value, type field indicates income/expense
     const processedAmount = Math.abs(parseFloat(amount));
     
@@ -84,14 +71,7 @@ export const updateTransaction = async (req, res) => {
       return res.status(404).json({ message: 'Transaction not found' });
     }
     
-    // Validation
-    if (type && !['income', 'expense'].includes(type)) {
-      return res.status(400).json({ message: 'Type must be either income or expense' });
-    }
-    
-    if (amount !== undefined && (isNaN(amount) || amount === 0)) {
-      return res.status(400).json({ message: 'Amount must be a valid number and not zero' });
-    }
+    // Validation is handled by middleware
     
     // Prepare update data
     const updateData = {};

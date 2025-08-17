@@ -9,9 +9,8 @@ import {
   Tooltip,
   Legend,
   ArcElement,
-  BarElement,
 } from 'chart.js';
-import { Line, Pie, Bar } from 'react-chartjs-2';
+import { Line, Pie } from 'react-chartjs-2';
 import { formatCurrency } from '../../utils/currency';
 
 ChartJS.register(
@@ -22,8 +21,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  ArcElement,
-  BarElement
+  ArcElement
 );
 
 const ExpenseChart = ({ expenseData, type = 'line', timeframe = 'monthly' }) => {
@@ -63,13 +61,16 @@ const ExpenseChart = ({ expenseData, type = 'line', timeframe = 'monthly' }) => 
   // Pie chart for category breakdown
   if (type === 'pie') {
     const latestData = data[data.length - 1];
-    const categories = latestData.categories || {
-      food: latestData.amount * 0.3,
-      transport: latestData.amount * 0.15,
-      entertainment: latestData.amount * 0.12,
-      shopping: latestData.amount * 0.18,
-      bills: latestData.amount * 0.25
-    };
+    // Use actual category data if available, otherwise use default breakdown
+    const categories = latestData.categories && Object.keys(latestData.categories).length > 0 
+      ? latestData.categories 
+      : {
+          food: latestData.amount * 0.3,
+          transport: latestData.amount * 0.15,
+          entertainment: latestData.amount * 0.12,
+          shopping: latestData.amount * 0.18,
+          bills: latestData.amount * 0.25
+        };
 
     const pieData = {
       labels: Object.keys(categories).map(key => 
@@ -155,114 +156,7 @@ const ExpenseChart = ({ expenseData, type = 'line', timeframe = 'monthly' }) => 
     );
   }
 
-  // Bar chart for category comparison
-  if (type === 'bar') {
-    const categories = ['Food', 'Transport', 'Entertainment', 'Shopping', 'Bills'];
-    const categoryData = categories.map(category => {
-      const key = category.toLowerCase();
-      return data.reduce((sum, item) => {
-        const categoryAmount = item.categories?.[key] || item.amount * (key === 'food' ? 0.3 : key === 'bills' ? 0.25 : key === 'shopping' ? 0.18 : key === 'transport' ? 0.15 : 0.12);
-        return sum + categoryAmount;
-      }, 0) / data.length;
-    });
 
-    const barData = {
-      labels: categories,
-      datasets: [
-        {
-          label: 'Average Monthly Spending',
-          data: categoryData,
-          backgroundColor: [
-            'rgba(59, 130, 246, 0.8)',
-            'rgba(16, 185, 129, 0.8)',
-            'rgba(245, 158, 11, 0.8)',
-            'rgba(239, 68, 68, 0.8)',
-            'rgba(139, 92, 246, 0.8)'
-          ],
-          borderColor: [
-            colors.primary,
-            colors.secondary,
-            colors.warning,
-            colors.danger,
-            colors.purple
-          ],
-          borderWidth: 2,
-          borderRadius: 8,
-          borderSkipped: false,
-        },
-      ],
-    };
-
-    const barOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          titleColor: '#ffffff',
-          bodyColor: '#ffffff',
-          borderColor: '#374151',
-          borderWidth: 1,
-          cornerRadius: 8,
-          displayColors: true,
-          callbacks: {
-            label: function(context) {
-              return `Average: ${formatCurrency(context.parsed.y)}`;
-            }
-          }
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            font: {
-              size: 11,
-              weight: '500'
-            },
-            color: '#6B7280'
-          }
-        },
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(107, 114, 128, 0.1)',
-            drawBorder: false,
-          },
-          ticks: {
-            font: {
-              size: 11,
-              weight: '500'
-            },
-            color: '#6B7280',
-            callback: function(value) {
-              return formatCurrency(value);
-            }
-          }
-        },
-      },
-    };
-
-    return (
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Average Spending by Category</h3>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
-            <span className="text-sm text-gray-600">6 Month Average</span>
-          </div>
-        </div>
-        <div className="h-80">
-          <Bar data={barData} options={barOptions} />
-        </div>
-      </div>
-    );
-  }
 
   // Line chart for expense trends
   const lineData = {
@@ -333,8 +227,8 @@ const ExpenseChart = ({ expenseData, type = 'line', timeframe = 'monthly' }) => 
           },
           color: '#6B7280',
           callback: function(value) {
-            return '$' + value.toLocaleString();
-          }
+              return formatCurrency(value);
+            }
         }
       },
     },

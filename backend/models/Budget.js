@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { encryptAmount, decryptAmount } from '../config/encryption.js';
 
 const budgetSchema = new mongoose.Schema({
   userId: {
@@ -12,9 +13,10 @@ const budgetSchema = new mongoose.Schema({
     trim: true
   },
   amount: {
-    type: Number,
+    type: mongoose.Schema.Types.Mixed, // Allow both Number and String (encrypted)
     required: [true, 'Budget amount is required'],
-    min: [0, 'Budget amount must be positive']
+    set: encryptAmount,  // Encrypt on save
+    get: decryptAmount   // Decrypt on retrieval
   },
   period: {
     type: String,
@@ -32,16 +34,34 @@ const budgetSchema = new mongoose.Schema({
     required: [true, 'End date is required']
   },
   spent: {
-    type: Number,
+    type: mongoose.Schema.Types.Mixed, // Allow both Number and String (encrypted)
     default: 0,
-    min: [0, 'Spent amount cannot be negative']
+    set: encryptAmount,  // Encrypt on save
+    get: decryptAmount   // Decrypt on retrieval
   },
   isActive: {
     type: Boolean,
     default: true
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { getters: true },
+  toObject: { getters: true }
+});
+
+// Ensure getters are applied when converting to JSON
+budgetSchema.set('toJSON', { 
+  getters: true,
+  transform: function(doc, ret) {
+    // Ensure amounts are properly decrypted for JSON output
+    if (ret.amount && typeof ret.amount === 'string') {
+      ret.amount = decryptAmount(ret.amount);
+    }
+    if (ret.spent && typeof ret.spent === 'string') {
+      ret.spent = decryptAmount(ret.spent);
+    }
+    return ret;
+  }
 });
 
 // Static methods

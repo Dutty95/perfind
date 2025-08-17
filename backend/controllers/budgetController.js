@@ -69,12 +69,7 @@ const createBudget = async (req, res) => {
   try {
     const { category, amount, period } = req.body;
     
-    // Validation
-    if (!category || !amount || amount <= 0) {
-      return res.status(400).json({ 
-        message: 'Category and valid amount are required' 
-      });
-    }
+    // Validation is handled by middleware
     
     // Check if budget already exists for this category and user
     const existingBudget = await Budget.find({ 
@@ -128,12 +123,7 @@ const updateBudget = async (req, res) => {
   try {
     const { category, amount, period } = req.body;
     
-    // Validation
-    if (amount && amount <= 0) {
-      return res.status(400).json({ 
-        message: 'Amount must be greater than 0' 
-      });
-    }
+    // Validation is handled by middleware
     
     // First check if budget exists and belongs to user
     const existingBudget = await Budget.findOne({ _id: req.params.id, userId: req.user._id });

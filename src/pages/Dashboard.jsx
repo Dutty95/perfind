@@ -21,7 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
-  const [user] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [dashboardData, setDashboardData] = useState({
@@ -42,7 +42,7 @@ const Dashboard = () => {
   });
   const [goals, setGoals] = useState([]);
   const [activeChartType, setActiveChartType] = useState('budget');
-  const [chartViewType, setChartViewType] = useState('bar');
+  const [chartViewType, setChartViewType] = useState('pie');
   const [selectedPeriod, setSelectedPeriod] = useState('monthly');
 
   useEffect(() => {
@@ -58,6 +58,11 @@ const Dashboard = () => {
       const dashboardOverview = await dashboardAPI.getOverview({ period: selectedPeriod });
       
       if (dashboardOverview) {
+        // Update user data if available
+        if (dashboardOverview.user) {
+          setUser(prevUser => ({ ...prevUser, ...dashboardOverview.user }));
+        }
+        
         // Map backend data structure to frontend expectations
         const mappedData = {
           financialSummary: dashboardOverview.financialSummary || {
@@ -82,8 +87,16 @@ const Dashboard = () => {
       ]);
 
       setAnalyticsData({
-        expenses: expenseAnalytics,
-        income: incomeAnalytics
+        expenses: {
+          monthlyData: expenseAnalytics?.monthlyData || [],
+          categoryData: expenseAnalytics?.categoryData || [],
+          averageSpendingByCategory: expenseAnalytics?.averageSpendingByCategory || []
+        },
+        income: {
+          monthlyData: incomeAnalytics?.monthlyData || [],
+          sourceTotals: incomeAnalytics?.sourceTotals || {},
+          averageIncomeBySource: incomeAnalytics?.averageIncomeBySource || []
+        }
       });
 
       // Fetch goals overview
@@ -297,17 +310,6 @@ const Dashboard = () => {
                 {/* Chart View Type Selector */}
                 <div className="flex bg-gray-100 rounded-lg p-1">
                   <button
-                    onClick={() => setChartViewType('bar')}
-                    className={`p-1.5 rounded-md transition-colors ${
-                      chartViewType === 'bar'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                    title="Bar Chart"
-                  >
-                    <ChartBarIcon className="h-4 w-4" />
-                  </button>
-                  <button
                     onClick={() => setChartViewType(activeChartType === 'income' ? 'doughnut' : 'pie')}
                     className={`p-1.5 rounded-md transition-colors ${
                       chartViewType === 'pie' || chartViewType === 'doughnut'
@@ -338,7 +340,8 @@ const Dashboard = () => {
               {activeChartType === 'budget' && (
                 <BudgetChart 
                   type={chartViewType} 
-                  budgetData={dashboardData.budgetOverview.map(budget => ({
+                  budgetData={dashboardData.budgetOverview.map((budget, index) => ({
+                    key: budget._id || budget.category || index,
                     category: budget.category,
                     budgeted: budget.amount,
                     spent: budget.spent || 0,

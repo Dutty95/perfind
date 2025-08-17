@@ -12,6 +12,11 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 backend/.env
+backend/.env.production
+
+# Keep only example files
+!.env.example
+!backend/.env.example
 
 # Build outputs
 /build/
