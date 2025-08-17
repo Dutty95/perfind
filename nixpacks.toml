@@ -7,9 +7,6 @@ cmds = ['npm ci']
 [phases.build]
 cmds = []
 
-[start]
-cmd = 'npm start'
-
 [variables]
 NODE_ENV = 'production'
 
@@ -20,4 +17,5 @@ workingDir = './backend'
 workingDir = './backend'
 
 [start]
+cmd = 'npm start'
 workingDir = './backend'
