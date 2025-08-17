@@ -1,0 +1,23 @@
+[phases.setup]
+nixPkgs = ['nodejs', 'npm']
+
+[phases.install]
+cmds = ['npm ci']
+
+[phases.build]
+cmds = []
+
+[start]
+cmd = 'npm start'
+
+[variables]
+NODE_ENV = 'production'
+
+[build]
+workingDir = './backend'
+
+[install]
+workingDir = './backend'
+
+[start]
+workingDir = './backend'
